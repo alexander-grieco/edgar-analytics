@@ -1,6 +1,6 @@
 import csv
 import sys
-from datetime import datetime
+from datetime import datetime, date, time
 import collections
 
 headerTitles = ['ip', 'date', 'time']
@@ -28,6 +28,28 @@ def getHeaderInfo(headerInfo):
             headerInfo.index(headerTitles[2]))
 
 
+def setDicts(ip, date, boundsDict, activeDict):
+    if ip not in activeDict:
+        activeDict[ip] = Session(ip, date)
+
+        if date not in boundsDict:
+            boundsDict[date] = collections.OrderedDict()
+
+        boundsDict[date][ip] = date
+    else:
+        boundsDict[activeDict[ip].start][ip] = date
+        activeDict[ip].updateLast(date)
+
+def oldSession(requestDate, time, inact):
+    return int((requestDate - time).total_seconds()) > inact
+
+
+
+def findCompletedSessions(requestDate, boundsDict, activeDict, output, inact):
+    for time in boundsDict:
+        if oldSession(requestDate, time, inact):
+            pass
+
 
 def getSessionization(inputFile, outputFile, inact):
 
@@ -37,6 +59,9 @@ def getSessionization(inputFile, outputFile, inact):
 
     # Dictionary of all active sessions
     activeSessionDict = dict()
+
+    current_time = datetime.min
+
 
     with open(inputFile, 'r') as input, open(outputFile, "w") as output:
         # input file reader
@@ -49,18 +74,12 @@ def getSessionization(inputFile, outputFile, inact):
 
         for request in inputReader:
             ip = request[ipIndex]
-            date = datetime.strptime(request[dateIndex] + " " + request[timeIndex], '%Y-%m-%d %H:%M:%S')
+            requestDate = datetime.strptime(request[dateIndex] + " " + request[timeIndex], '%Y-%m-%d %H:%M:%S')
+            setDicts(ip, requestDate, sessionBoundsDict, activeSessionDict)
+            if requestDate > current_time:
+                current_time = requestDate
+                findCompletedSessions(requestDate, sessionBoundsDict, activeSessionDict, output, inact)
 
-            if ip not in activeSessionDict:
-                activeSessionDict[ip] = Session(ip, date)
-
-                if date not in sessionBoundsDict:
-                    sessionBoundsDict[date] = collections.OrderedDict()
-
-                sessionBoundsDict[date][ip] = date
-            else:
-                sessionBoundsDict[activeSessionDict[ip].start][ip] = date
-                activeSessionDict[ip].updateLast(date)
 
 
 # main function
