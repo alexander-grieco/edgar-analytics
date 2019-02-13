@@ -36,19 +36,41 @@ def setDicts(ip, date, boundsDict, activeDict):
             boundsDict[date] = collections.OrderedDict()
 
         boundsDict[date][ip] = date
+
     else:
+
         boundsDict[activeDict[ip].start][ip] = date
         activeDict[ip].updateLast(date)
+
+    # else:
+    #     oldLast = activeDict[ip].last
+    #     if date not in boundsDict:
+    #         boundsDict[date] = collections.OrderedDict()
+    #     if !(oldSession(date, oldLast, inact)):
+    #         boundsDict[oldLast].remove(ip)
+    #         if !(boundsDict[oldLast]):
+    #             boundsDict.remove(oldLast)
+    #     boundsDict[date][ip] = activeDict[ip].start
+
 
 def oldSession(requestDate, time, inact):
     return int((requestDate - time).total_seconds()) > inact
 
 
-
 def findCompletedSessions(requestDate, boundsDict, activeDict, output, inact):
     for time in boundsDict:
         if oldSession(requestDate, time, inact):
-            pass
+            for ip in boundsDict[time]:
+                if oldSession(requestDate, boundsDict[time][ip], inact):
+                    activeDict[ip].writeToOutput(output)
+                    del activeDict[ip]
+                    del boundsDict[time][ip]
+            if !(boundsDict[time]):
+                del boundsDict[time]
+
+
+def flushActiveSessions(time, boundsDict, activeDict, output):
+    pass
 
 
 def getSessionization(inputFile, outputFile, inact):
@@ -79,6 +101,8 @@ def getSessionization(inputFile, outputFile, inact):
             if requestDate > current_time:
                 current_time = requestDate
                 findCompletedSessions(requestDate, sessionBoundsDict, activeSessionDict, output, inact)
+
+        flushActiveSessions(current_time, sessionBoundsDict, activeSessionDict, output)
 
 
 
