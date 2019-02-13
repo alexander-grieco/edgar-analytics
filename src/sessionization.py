@@ -1,9 +1,9 @@
 import csv
 import sys
-import datetime
+from datetime import datetime
 import collections
 
-headerTitles = ['ip', 'date', 'time', 'cik', 'accession','extention']
+headerTitles = ['ip', 'date', 'time']
 
 
 class Session:
@@ -25,12 +25,7 @@ class Session:
 
 def getHeaderInfo(headerInfo):
     return (headerInfo.index(headerTitles[0]),headerInfo.index(headerTitles[1]),
-            headerInfo.index(headerTitles[2]),headerInfo.index(headerTitles[3]),
-            headerInfo.index(headerTitles[4]),headerInfo.index(headerTitles[5]))
-
-
-
-
+            headerInfo.index(headerTitles[2]))
 
 
 
@@ -44,8 +39,14 @@ def getSessionization(inputFile, outputFile, inact):
 
         headerInfo = inputReader.next()
 
-        ipIndex, dateIndex, timeIndex, cikIndex, accIndex, extIndex = getHeaderInfo(headerInfo)
-        print(timeIndex)
+        ipIndex, dateIndex, timeIndex = getHeaderInfo(headerInfo)
+
+
+        for request in inputReader:
+            ip = request[ipIndex]
+            date = datetime.strptime(request[dateIndex] + " " + request[timeIndex], '%Y-%m-%d %H:%M:%S')
+            
+
 
 
 # main function
