@@ -17,6 +17,7 @@ class Session:
         self.last = start
         self.numDocs = 1
 
+
     # updates the last request time and number of documents acccessed
     def updateLast(self, time):
         self.last = time
