@@ -28,59 +28,83 @@ class Session:
                     int((self.last - self.start).total_seconds()) + 1,self.numDocs))
 
 
-# Returns the index of all relevant columns
+# Returns the index of all relevant columns as defined by global variable headerTitles
 def getHeaderInfo(headerInfo):
     return (headerInfo.index(headerTitles[0]),headerInfo.index(headerTitles[1]),
             headerInfo.index(headerTitles[2]))
 
-
+# sets the session bounds dict which is used to keep sessions in order by session start time
 def setDicts(ip, date, boundsDict, activeDict):
+    # if ip is not part of an active session create one and add it to the bounds dict
+    # also create a session object and add it to active session dictionary
     if ip not in activeDict:
-        activeDict[ip] = Session(ip, date)
+        activeDict[ip] = Session(ip, date) #creating instance of a Session
 
+        # if date is not in the bounds dict, add it to bounds dict and make
+        # value another ordered dictionary (will be used to order ips)
         if date not in boundsDict:
-            boundsDict[date] = collections.OrderedDict() #maybe change
+            boundsDict[date] = collections.OrderedDict()
 
+        # initialize last datetime of the session to current time, this will be updated if new
+        # records for this ip appear within the inactivity window
         boundsDict[date][ip] = date
 
+    # else ip already exists in an active session, must update session end time to current time
     else:
+        boundsDict[activeDict[ip].start][ip] = date #update in bounds dict
+        activeDict[ip].updateLast(date) #update in active dict
 
-        boundsDict[activeDict[ip].start][ip] = date
-        activeDict[ip].updateLast(date)
-
-
+# returns true if the session is older than the defined inactivity period, false if not
 def oldSession(requestDate, time, inact):
     return int((requestDate - time).total_seconds()) > inact
 
+# writes the information from a finished session to the output file
+# further deletes entries in activeDict and boundsDict
+# if boundsDict[time] entry is empty, will also delete this from boundsDict
 def writeFinishedSession(ip, time, boundsDict, activeDict, output):
     activeDict[ip].writeToOutput(output)
     del activeDict[ip]
     del boundsDict[time][ip]
+    if not boundsDict[time]:
+        del boundsDict[time]
 
 
+# finds all completed sessions and writes their information to the output file
 def findCompletedSessions(requestDate, boundsDict, activeDict, output, inact):
     for time in boundsDict:
+        # if current time minus start time is out of session window
         if oldSession(requestDate, time, inact):
+            # loop through all the ips in this starting timeslot
             for ip in boundsDict[time]:
+                # if the session end time is out of the session window, write to output file
                 if oldSession(requestDate, boundsDict[time][ip], inact):
                     writeFinishedSession(ip, time, boundsDict, activeDict, output)
-            if not boundsDict[time]:
-                del boundsDict[time]
+        # if time is not an old session, then no subsequent times will be old (since they are ordered)
+        # thus to avoid extra searching, break from loop
+        else:
+            break
 
-
+# Once input file has ended, flush the remaining active sessions in order of their start time
 def flushActiveSessions(time, boundsDict, activeDict, output):
+    # loop over all sessions in boundsDict
+    # NOTE: will loop in order of start time due to structure of boundsDict
     for time in boundsDict:
+        # loop over each ip in each time bin of boundsDict
         for ip in boundsDict[time]:
+            # write sessions to file
             writeFinishedSession(ip, time, boundsDict, activeDict, output)
 
-
+# loop through each line of input file and write all completed sessions to output file
+# when file is complete, flush all records to output file
 def getSessionization(inputFile, outputFile, inact):
 
-    # Creates two level ordered dictionary with time as the key of the first level and
-    # the ip as the key of the second level. This set up allows quick querying by time and ip
+    # Creates two level ordered dictionary with session start time as the key of the first level and
+    # the ip as the key of the second level. The value of the second level will be the last request
+    # time in the session. This structure allows quick queries by start time and ip and allows it
+    # to flush records in order of start time when the input file is complete
     sessionBoundsDict = collections.OrderedDict()
 
-    # Dictionary of all active sessions
+    # Dictionary of all active sessions. Key is ip and value will be a Session object
     activeSessionDict = dict()
 
     # initiate current time to minumum possible
