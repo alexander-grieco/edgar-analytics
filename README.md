@@ -1,6 +1,6 @@
 # Edgar Analytics Solution
 
-See the prompt for this problem (here)[https://github.com/InsightDataScience/edgar-analytics]
+See the prompt for this problem [here](https://github.com/InsightDataScience/edgar-analytics)
 
 The idea of my solution is to use two dictionaries. The first, is a two level ordered dictionary (sessionBoundsDict) where the key of the first level is the start time of an active session and the value is dictionary object with the ip address of the user as key and the value is the time of the last request for that session. The idea here is to create quick lookups by time first and then by ip. The reason I have used an ordered dictionary, is that we are supposed to flush all remaining sessions (when the input file ends) in order of start time of the session. This is also why I have chosen start time as the key in the first level of the dictionary.
 
