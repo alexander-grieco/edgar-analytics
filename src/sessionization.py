@@ -19,7 +19,7 @@ class Session:
 
     def writeToOutput(self, output):
         output.write('{},{},{},{},{}\n'.format(self.ip, self.start,
-            self.last,(self.last - self.start).TotalSeconds + 1,self.numDocs))
+            self.last,int((self.last - self.start).total_seconds()) + 1,self.numDocs))
 
 
 # Returns the index of all relevant columns
@@ -42,19 +42,14 @@ def setDicts(ip, date, boundsDict, activeDict):
         boundsDict[activeDict[ip].start][ip] = date
         activeDict[ip].updateLast(date)
 
-    # else:
-    #     oldLast = activeDict[ip].last
-    #     if date not in boundsDict:
-    #         boundsDict[date] = collections.OrderedDict()
-    #     if !(oldSession(date, oldLast, inact)):
-    #         boundsDict[oldLast].remove(ip)
-    #         if !(boundsDict[oldLast]):
-    #             boundsDict.remove(oldLast)
-    #     boundsDict[date][ip] = activeDict[ip].start
-
 
 def oldSession(requestDate, time, inact):
     return int((requestDate - time).total_seconds()) > inact
+
+def writeFinishedSession(ip, time, boundsDict, activeDict, output):
+    activeDict[ip].writeToOutput(output)
+    del activeDict[ip]
+    del boundsDict[time][ip]
 
 
 def findCompletedSessions(requestDate, boundsDict, activeDict, output, inact):
@@ -62,15 +57,15 @@ def findCompletedSessions(requestDate, boundsDict, activeDict, output, inact):
         if oldSession(requestDate, time, inact):
             for ip in boundsDict[time]:
                 if oldSession(requestDate, boundsDict[time][ip], inact):
-                    activeDict[ip].writeToOutput(output)
-                    del activeDict[ip]
-                    del boundsDict[time][ip]
-            if !(boundsDict[time]):
+                    writeFinishedSession(ip, time, boundsDict, activeDict, output)
+            if not boundsDict[time]:
                 del boundsDict[time]
 
 
 def flushActiveSessions(time, boundsDict, activeDict, output):
-    pass
+    for time in boundsDict:
+        for ip in boundsDict[time]:
+            writeFinishedSession(ip, time, boundsDict, activeDict, output)
 
 
 def getSessionization(inputFile, outputFile, inact):
